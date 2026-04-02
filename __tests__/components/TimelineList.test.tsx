@@ -5,6 +5,8 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import TimelineList from '@/components/TimelineList'
 import type { TimelineItem } from '@/lib/types'
 
+jest.mock('uuid', () => ({ v4: () => 'test-id' }))
+
 const items: TimelineItem[] = [
   { id: '1', timestamp: 32, place: '인천공항', city: '인천', country: '대한민국', countryCode: 'KR', description: '도착', lat: 37.4, lng: 126.4, hasCoords: true },
   { id: '2', timestamp: 468, place: '명동 거리', city: '서울', country: '대한민국', countryCode: 'KR', description: '쇼핑', lat: 37.5, lng: 126.9, hasCoords: true },

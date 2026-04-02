@@ -11,15 +11,21 @@ declare global {
           videoId: string
           playerVars?: Record<string, number | string>
           events?: {
-            onReady?: (e: { target: any }) => void
-            onStateChange?: (e: { data: number; target: any }) => void
+            onReady?: (e: { target: YTPlayer }) => void
+            onStateChange?: (e: { data: number; target: YTPlayer }) => void
           }
         }
-      ) => any
+      ) => YTPlayer
       PlayerState: { PLAYING: number }
     }
     onYouTubeIframeAPIReady: () => void
   }
+}
+
+interface YTPlayer {
+  seekTo(seconds: number, allowSeekAhead: boolean): void
+  getCurrentTime(): number
+  destroy(): void
 }
 
 export interface VideoPlayerHandle {
@@ -33,7 +39,7 @@ interface Props {
 
 const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(
   function VideoPlayer({ videoId, onTimeUpdate }, ref) {
-    const playerRef = useRef<any>(null)
+    const playerRef = useRef<YTPlayer | null>(null)
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     useImperativeHandle(ref, () => ({

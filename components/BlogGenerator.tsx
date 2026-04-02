@@ -54,6 +54,7 @@ export default function BlogGenerator({ items, videoTitle }: Props) {
         }
       }
     } catch (err) {
+      console.error('Blog generation fetch error:', err)
       setError('블로그 생성 중 오류가 발생했습니다.')
       setIsGenerating(false)
     }

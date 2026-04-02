@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import type { TimelineItem } from '@/lib/types'
 import TimelineItemRow from './TimelineItemRow'
 import TimelineEditForm from './TimelineEditForm'

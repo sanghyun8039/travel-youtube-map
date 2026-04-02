@@ -1,14 +1,12 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect } from 'react'
 import {
   APIProvider,
   Map,
   AdvancedMarker,
   Pin,
-  useMap,
-  MapControl,
-  ControlPosition
+  useMap
 } from '@vis.gl/react-google-maps'
 import type { TimelineItem } from '@/lib/types'
 
@@ -43,7 +41,7 @@ function MapUpdater({ items, focusedItemId }: Props) {
     })
 
     if (hasValidCoords) {
-      map.fitBounds(bounds, { padding: 50 })
+      map.fitBounds(bounds, 50)
     }
   }, [map, items, focusedItemId])
 

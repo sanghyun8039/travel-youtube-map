@@ -39,6 +39,7 @@ ${locationsStr}
         }
         controller.enqueue(encoder.encode('data: {"done": true}\n\n'))
       } catch (err) {
+        console.error('Blog generation error:', err)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: '블로그 생성 중 오류가 발생했습니다.' })}\n\n`))
       } finally {
         controller.close()

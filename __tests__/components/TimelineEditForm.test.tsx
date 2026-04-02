@@ -5,6 +5,8 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import TimelineEditForm from '@/components/TimelineEditForm'
 import type { TimelineItem } from '@/lib/types'
 
+jest.mock('uuid', () => ({ v4: () => 'test-id' }))
+
 const mockItem: TimelineItem = {
   id: 'abc',
   timestamp: 468,
