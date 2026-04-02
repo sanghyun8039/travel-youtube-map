@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Travel Map — Main UI Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e5e5e5; height: 100vh; overflow: hidden; }
+
+  /* Top nav */
+  .nav { height: 52px; background: #1a1a1a; border-bottom: 1px solid #2a2a2a; display: flex; align-items: center; padding: 0 20px; gap: 12px; }
+  .nav-logo { font-weight: 700; font-size: 16px; color: #fff; }
+  .nav-logo span { color: #ef4444; }
+  .nav-url { flex: 1; background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 6px; padding: 6px 12px; font-size: 13px; color: #9ca3af; max-width: 520px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nav-btn { background: #ef4444; color: white; border: none; border-radius: 6px; padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+  /* Main layout: left panel + right map */
+  .main { display: grid; grid-template-columns: 400px 1fr; height: calc(100vh - 52px); }
+
+  /* Left panel */
+  .left { display: flex; flex-direction: column; background: #141414; border-right: 1px solid #2a2a2a; overflow: hidden; }
+
+  /* Video player area */
+  .video-wrap { position: relative; background: #000; aspect-ratio: 16/9; width: 100%; flex-shrink: 0; }
+  .video-inner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; }
+  .play-btn { width: 52px; height: 52px; background: rgba(239,68,68,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .video-title { font-size: 11px; color: #9ca3af; text-align: center; padding: 0 16px; }
+
+  /* Timeline section */
+  .timeline-header { padding: 12px 16px 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a2a2a; flex-shrink: 0; }
+  .timeline-header h3 { font-size: 13px; font-weight: 600; color: #e5e5e5; }
+  .location-count { font-size: 11px; color: #6b7280; background: #2a2a2a; padding: 2px 8px; border-radius: 10px; }
+
+  .timeline-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .timeline-list::-webkit-scrollbar { width: 4px; }
+  .timeline-list::-webkit-scrollbar-track { background: transparent; }
+  .timeline-list::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 2px; }
+
+  .timeline-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 16px; cursor: pointer; transition: background 0.15s; border-left: 3px solid transparent; }
+  .timeline-item:hover { background: #1e1e1e; }
+  .timeline-item.active { background: #1e1e1e; border-left-color: #ef4444; }
+
+  .time-badge { background: #2a2a2a; color: #9ca3af; font-size: 10px; font-weight: 600; padding: 3px 6px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; font-family: monospace; }
+  .timeline-item.active .time-badge { background: #ef4444; color: white; }
+
+  .item-info { flex: 1; min-width: 0; }
+  .item-place { font-size: 13px; font-weight: 600; color: #e5e5e5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-desc { font-size: 11px; color: #6b7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-country { font-size: 10px; color: #9ca3af; margin-top: 2px; display: flex; align-items: center; gap: 3px; }
+
+  .marker-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0; margin-top: 6px; }
+  .timeline-item.active .marker-dot { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.25); }
+
+  /* Blog button area */
+  .blog-section { padding: 12px 16px; border-top: 1px solid #2a2a2a; flex-shrink: 0; background: #141414; }
+  .blog-btn { width: 100%; background: linear-gradient(135deg, #1d4ed8, #7c3aed); color: white; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .blog-hint { font-size: 10px; color: #6b7280; text-align: center; margin-top: 6px; }
+
+  /* Right: Map */
+  .map-area { position: relative; background: #1a2535; overflow: hidden; }
+  .map-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+
+  /* Fake map tiles */
+  .map-bg { position: absolute; inset: 0; background:
+    repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,255,255,0.02) 60px, rgba(255,255,255,0.02) 61px),
+    repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(255,255,255,0.02) 60px, rgba(255,255,255,0.02) 61px);
+  }
+  .map-road-h { position: absolute; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; }
+  .map-road-v { position: absolute; width: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  /* Map markers */
+  .map-marker { position: absolute; transform: translate(-50%, -100%); cursor: pointer; }
+  .marker-pin { width: 28px; height: 28px; background: #ef4444; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.4); border: 2px solid white; transition: transform 0.15s; }
+  .marker-pin.active { background: #f97316; transform: rotate(-45deg) scale(1.2); }
+  .marker-pin-inner { transform: rotate(45deg); font-size: 11px; font-weight: 700; color: white; }
+  .marker-label { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; font-size: 11px; padding: 3px 7px; border-radius: 4px; white-space: nowrap; pointer-events: none; }
+  .marker-label.active { background: #f97316; }
+
+  /* Route line */
+  .route-svg { position: absolute; inset: 0; pointer-events: none; }
+
+  /* Map controls */
+  .map-controls { position: absolute; top: 16px; right: 16px; display: flex; flex-direction: column; gap: 4px; }
+  .map-ctrl-btn { width: 32px; height: 32px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #94a3b8; cursor: pointer; }
+
+  /* Info popup */
+  .map-popup { position: absolute; bottom: 24px; left: 24px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px; width: 220px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .popup-time { font-size: 10px; color: #ef4444; font-weight: 600; font-family: monospace; margin-bottom: 4px; }
+  .popup-place { font-size: 15px; font-weight: 700; color: #f1f5f9; margin-bottom: 2px; }
+  .popup-loc { font-size: 11px; color: #94a3b8; margin-bottom: 8px; }
+  .popup-desc { font-size: 11px; color: #cbd5e1; line-height: 1.5; }
+  .popup-arrow { position: absolute; top: 14px; right: 14px; font-size: 18px; }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-logo">Travel<span>Map</span></div>
+  <div class="nav-url">🔗 https://www.youtube.com/watch?v=dQw4w9WgXcQ</div>
+  <button class="nav-btn">새 영상 분석</button>
+</nav>
+
+<div class="main">
+
+  <!-- Left Panel -->
+  <div class="left">
+
+    <!-- Video Player -->
+    <div class="video-wrap">
+      <div class="video-inner">
+        <div class="play-btn">▶</div>
+        <div class="video-title">[서울 브이로그] 인천공항 → 명동 → 경복궁 → 남산타워 완벽 코스</div>
+      </div>
+    </div>
+
+    <!-- Timeline header -->
+    <div class="timeline-header">
+      <h3>📍 방문 장소 타임라인</h3>
+      <span class="location-count">6곳</span>
+    </div>
+
+    <!-- Timeline items -->
+    <div class="timeline-list">
+
+      <div class="timeline-item">
+        <div class="time-badge">00:32</div>
+        <div class="marker-dot"></div>
+        <div class="item-info">
+          <div class="item-place">인천국제공항</div>
+          <div class="item-desc">제1터미널 도착, 입국 과정</div>
+          <div class="item-country">🇰🇷 인천, 대한민국</div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="time-badge">03:15</div>
+        <div class="marker-dot"></div>
+        <div class="item-info">
+          <div class="item-place">홍대 거리</div>
+          <div class="item-desc">버스킹, 카페 투어</div>
+          <div class="item-country">🇰🇷 서울, 대한민국</div>
+        </div>
+      </div>
+
+      <div class="timeline-item active">
+        <div class="time-badge">07:48</div>
+        <div class="marker-dot"></div>
+        <div class="item-info">
+          <div class="item-place">명동 거리</div>
+          <div class="item-desc">길거리 음식, 쇼핑</div>
+          <div class="item-country">🇰🇷 서울, 대한민국</div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="time-badge">12:20</div>
+        <div class="marker-dot"></div>
+        <div class="item-info">
+          <div class="item-place">경복궁</div>
+          <div class="item-desc">한복 체험, 궁궐 투어</div>
+          <div class="item-country">🇰🇷 서울, 대한민국</div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="time-badge">18:05</div>
+        <div class="marker-dot"></div>
+        <div class="item-info">
+          <div class="item-place">남산타워 (N서울타워)</div>
+          <div class="item-desc">케이블카, 야경 감상</div>
+          <div class="item-country">🇰🇷 서울, 대한민국</div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="time-badge">22:40</div>
+        <div class="marker-dot"></div>
+        <div class="item-info">
+          <div class="item-place">광장시장</div>
+          <div class="item-desc">빈대떡, 마약김밥 야식</div>
+          <div class="item-country">🇰🇷 서울, 대한민국</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Blog generation -->
+    <div class="blog-section">
+      <button class="blog-btn">✍️ 블로그 포스트 자동 생성</button>
+      <div class="blog-hint">타임라인 분석 결과를 바탕으로 여행 블로그 초안을 작성합니다</div>
+    </div>
+
+  </div>
+
+  <!-- Right: Map -->
+  <div class="map-area">
+    <div class="map-bg"></div>
+
+    <!-- Fake roads -->
+    <div class="map-road-h" style="top:38%;left:0;right:0;"></div>
+    <div class="map-road-h" style="top:55%;left:0;right:0;opacity:0.5;"></div>
+    <div class="map-road-h" style="top:70%;left:0;right:0;opacity:0.3;"></div>
+    <div class="map-road-v" style="left:30%;top:0;bottom:0;"></div>
+    <div class="map-road-v" style="left:55%;top:0;bottom:0;opacity:0.5;"></div>
+    <div class="map-road-v" style="left:75%;top:0;bottom:0;opacity:0.3;"></div>
+
+    <!-- Route SVG -->
+    <svg class="route-svg" xmlns="http://www.w3.org/2000/svg">
+      <polyline points="18%,75% 28%,60% 45%,52% 55%,38% 68%,30% 72%,55%"
+        style="fill:none;stroke:#ef4444;stroke-width:2;stroke-dasharray:6,4;opacity:0.7;"
+        vector-effect="non-scaling-stroke"/>
+    </svg>
+
+    <!-- Markers -->
+    <div class="map-marker" style="left:18%;top:75%;">
+      <div class="marker-pin"><div class="marker-pin-inner">1</div></div>
+      <div class="marker-label">인천공항</div>
+    </div>
+    <div class="map-marker" style="left:28%;top:60%;">
+      <div class="marker-pin"><div class="marker-pin-inner">2</div></div>
+      <div class="marker-label">홍대</div>
+    </div>
+    <div class="map-marker" style="left:45%;top:52%;">
+      <div class="marker-pin active"><div class="marker-pin-inner">3</div></div>
+      <div class="marker-label active">명동 ◀ 현재</div>
+    </div>
+    <div class="map-marker" style="left:55%;top:38%;">
+      <div class="marker-pin"><div class="marker-pin-inner">4</div></div>
+      <div class="marker-label">경복궁</div>
+    </div>
+    <div class="map-marker" style="left:68%;top:30%;">
+      <div class="marker-pin"><div class="marker-pin-inner">5</div></div>
+      <div class="marker-label">남산타워</div>
+    </div>
+    <div class="map-marker" style="left:72%;top:55%;">
+      <div class="marker-pin"><div class="marker-pin-inner">6</div></div>
+      <div class="marker-label">광장시장</div>
+    </div>
+
+    <!-- Map controls -->
+    <div class="map-controls">
+      <div class="map-ctrl-btn">+</div>
+      <div class="map-ctrl-btn">−</div>
+      <div class="map-ctrl-btn">⊕</div>
+    </div>
+
+    <!-- Popup -->
+    <div class="map-popup">
+      <div class="popup-arrow">📍</div>
+      <div class="popup-time">07:48</div>
+      <div class="popup-place">명동 거리</div>
+      <div class="popup-loc">Jung-gu, Seoul · 대한민국</div>
+      <div class="popup-desc">길거리 음식과 쇼핑으로 유명한 서울의 대표 관광지. 유튜버가 호떡과 탕후루를 먹으며 거리를 소개.</div>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

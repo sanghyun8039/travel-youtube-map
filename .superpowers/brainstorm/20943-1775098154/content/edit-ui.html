@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timeline Edit UI</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e5e5e5; padding: 24px; }
+
+  h2 { font-size: 18px; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+  .panel { background: #141414; border: 1px solid #2a2a2a; border-radius: 10px; overflow: hidden; }
+  .panel-title { padding: 12px 16px; border-bottom: 1px solid #2a2a2a; font-size: 12px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* Timeline items */
+  .timeline-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #1e1e1e; position: relative; }
+  .timeline-item:hover .item-actions { opacity: 1; }
+  .timeline-item.editing { background: #1a2535; border-left: 3px solid #3b82f6; }
+
+  .time-badge { background: #2a2a2a; color: #9ca3af; font-size: 10px; font-weight: 600; padding: 3px 7px; border-radius: 4px; font-family: monospace; white-space: nowrap; flex-shrink: 0; }
+  .marker-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0; }
+
+  .item-info { flex: 1; min-width: 0; }
+  .item-place { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-desc { font-size: 11px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+
+  /* Hover action buttons */
+  .item-actions { opacity: 0; display: flex; gap: 4px; flex-shrink: 0; transition: opacity 0.15s; }
+  .action-btn { width: 26px; height: 26px; border-radius: 5px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .btn-edit { background: #1d4ed8; color: white; }
+  .btn-delete { background: #7f1d1d; color: #fca5a5; }
+
+  /* Add button */
+  .add-row { padding: 10px 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #3b82f6; font-size: 13px; border-bottom: 1px solid #1e1e1e; }
+  .add-row:hover { background: #1a1f2e; }
+  .add-icon { width: 22px; height: 22px; border-radius: 50%; background: #1d3a5f; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+
+  /* Edit form (inline) */
+  .edit-form { background: #1a2535; border: 1px solid #3b82f6; border-radius: 8px; padding: 14px; margin: 4px 14px 4px; }
+  .edit-form-title { font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .form-field { display: flex; flex-direction: column; gap: 3px; }
+  .form-field.full { grid-column: 1/-1; }
+  .form-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+  .form-input { background: #0f172a; border: 1px solid #334155; border-radius: 5px; padding: 6px 9px; font-size: 12px; color: #e2e8f0; outline: none; }
+  .form-input:focus { border-color: #3b82f6; }
+  .form-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .btn-save { background: #1d4ed8; color: white; border: none; border-radius: 5px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .btn-cancel { background: #2a2a2a; color: #9ca3af; border: none; border-radius: 5px; padding: 6px 14px; font-size: 12px; cursor: pointer; }
+
+  /* Delete confirm */
+  .delete-confirm { background: #1c0f0f; border: 1px solid #7f1d1d; border-radius: 8px; padding: 12px 14px; margin: 4px 14px 4px; display: flex; align-items: center; justify-content: space-between; }
+  .delete-text { font-size: 12px; color: #fca5a5; }
+  .delete-text strong { display: block; color: #f87171; font-size: 13px; margin-bottom: 2px; }
+  .delete-actions { display: flex; gap: 6px; }
+  .btn-confirm-delete { background: #dc2626; color: white; border: none; border-radius: 5px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .btn-confirm-cancel { background: #2a2a2a; color: #9ca3af; border: none; border-radius: 5px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+
+  .note { font-size: 11px; color: #6b7280; padding: 10px 14px; }
+</style>
+</head>
+<body>
+
+<h2>타임라인 편집 인터랙션</h2>
+<p class="subtitle">수정 · 삭제 · 추가 — 각각 어떻게 동작하는지 보여드려요</p>
+
+<div class="split">
+
+  <!-- Left: Edit mode -->
+  <div>
+    <div class="panel-title" style="padding:8px 16px;font-size:11px;color:#3b82f6;background:#0f172a;">✏️ 수정 모드 — 아이템 클릭 시</div>
+    <div class="panel">
+      <div class="timeline-item">
+        <div class="time-badge">00:32</div>
+        <div class="marker-dot"></div>
+        <div class="item-info">
+          <div class="item-place">인천국제공항</div>
+          <div class="item-desc">제1터미널 도착, 입국 과정</div>
+        </div>
+        <div class="item-actions" style="opacity:1;">
+          <button class="action-btn btn-edit">✏️</button>
+          <button class="action-btn btn-delete">🗑</button>
+        </div>
+      </div>
+
+      <!-- Edit form opens inline below the item -->
+      <div class="edit-form">
+        <div class="edit-form-title">✏️ 장소 수정</div>
+        <div class="form-row">
+          <div class="form-field">
+            <div class="form-label">타임스탬프</div>
+            <input class="form-input" value="00:32" />
+          </div>
+          <div class="form-field">
+            <div class="form-label">국가/도시</div>
+            <input class="form-input" value="인천, 대한민국" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field full">
+            <div class="form-label">장소명</div>
+            <input class="form-input" value="인천국제공항" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field full">
+            <div class="form-label">설명</div>
+            <input class="form-input" value="제1터미널 도착, 입국 과정" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save">저장</button>
+          <button class="btn-cancel">취소</button>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="time-badge">03:15</div>
+        <div class="marker-dot"></div>
+        <div class="item-info">
+          <div class="item-place">홍대 거리</div>
+          <div class="item-desc">버스킹, 카페 투어</div>
+        </div>
+        <div class="item-actions" style="opacity:1;">
+          <button class="action-btn btn-edit">✏️</button>
+          <button class="action-btn btn-delete">🗑</button>
+        </div>
+      </div>
+
+      <div class="note">💡 각 아이템에 마우스를 올리면 수정/삭제 버튼이 나타납니다</div>
+    </div>
+  </div>
+
+  <!-- Right: Delete + Add -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+
+    <!-- Delete confirm -->
+    <div>
+      <div class="panel-title" style="padding:8px 16px;font-size:11px;color:#ef4444;background:#1c0a0a;">🗑 삭제 확인 — 실수 방지</div>
+      <div class="panel">
+        <div class="timeline-item">
+          <div class="time-badge" style="opacity:0.4;">07:48</div>
+          <div class="marker-dot" style="background:#4b5563;"></div>
+          <div class="item-info" style="opacity:0.4;">
+            <div class="item-place">명동 거리</div>
+            <div class="item-desc">길거리 음식, 쇼핑</div>
+          </div>
+        </div>
+        <div class="delete-confirm">
+          <div class="delete-text">
+            <strong>명동 거리</strong>
+            이 항목을 삭제할까요?
+          </div>
+          <div class="delete-actions">
+            <button class="btn-confirm-delete">삭제</button>
+            <button class="btn-confirm-cancel">취소</button>
+          </div>
+        </div>
+        <div class="note">💡 삭제 버튼은 즉시 삭제하지 않고 확인을 요청합니다</div>
+      </div>
+    </div>
+
+    <!-- Add item -->
+    <div>
+      <div class="panel-title" style="padding:8px 16px;font-size:11px;color:#4ade80;background:#0a1a0f;">＋ 새 장소 추가</div>
+      <div class="panel">
+        <div class="timeline-item">
+          <div class="time-badge">18:05</div>
+          <div class="marker-dot"></div>
+          <div class="item-info">
+            <div class="item-place">남산타워</div>
+            <div class="item-desc">케이블카, 야경 감상</div>
+          </div>
+          <div class="item-actions" style="opacity:1;">
+            <button class="action-btn btn-edit">✏️</button>
+            <button class="action-btn btn-delete">🗑</button>
+          </div>
+        </div>
+
+        <!-- Add row -->
+        <div class="add-row">
+          <div class="add-icon">＋</div>
+          <span>새 장소 추가하기</span>
+        </div>
+
+        <!-- Add form (same as edit form but empty) -->
+        <div class="edit-form" style="border-color:#166534;background:#0a1a0f;">
+          <div class="edit-form-title" style="color:#4ade80;">＋ 새 장소 추가</div>
+          <div class="form-row">
+            <div class="form-field">
+              <div class="form-label">타임스탬프</div>
+              <input class="form-input" placeholder="22:30" />
+            </div>
+            <div class="form-field">
+              <div class="form-label">국가/도시</div>
+              <input class="form-input" placeholder="서울, 대한민국" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field full">
+              <div class="form-label">장소명</div>
+              <input class="form-input" placeholder="광장시장" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field full">
+              <div class="form-label">설명</div>
+              <input class="form-input" placeholder="야시장, 빈대떡 먹방" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-save" style="background:#166534;">추가</button>
+            <button class="btn-cancel">취소</button>
+          </div>
+        </div>
+        <div class="note">💡 추가 시 타임스탬프 순서로 자동 정렬됩니다</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

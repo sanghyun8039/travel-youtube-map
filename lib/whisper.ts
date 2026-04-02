@@ -1,16 +1,17 @@
-import { execSync } from 'child_process'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 import { createReadStream } from 'fs'
 import { promises as fs } from 'fs'
 import path from 'path'
 import OpenAI from 'openai'
 
+const execAsync = promisify(exec)
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export async function downloadAudio(videoId: string, outputDir: string): Promise<string> {
   const outputPath = path.join(outputDir, `${videoId}.mp3`)
-  execSync(
-    `yt-dlp -x --audio-format mp3 -o "${outputPath}" "https://www.youtube.com/watch?v=${videoId}"`,
-    { stdio: 'pipe' }
+  await execAsync(
+    `yt-dlp -x --audio-format mp3 -o "${outputPath}" "https://www.youtube.com/watch?v=${videoId}"`
   )
   return outputPath
 }

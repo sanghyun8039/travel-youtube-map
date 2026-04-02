@@ -1,0 +1,43 @@
+{
+  "version": "3.0",
+  "lastUpdated": "2026-04-02T06:06:56.710Z",
+  "activeFeatures": {},
+  "primaryFeature": null,
+  "archivedFeatures": {},
+  "pipeline": {
+    "currentPhase": 1,
+    "level": "Starter",
+    "phaseHistory": []
+  },
+  "session": {
+    "startedAt": "2026-04-02T06:04:28.754Z",
+    "onboardingCompleted": false,
+    "lastActivity": "2026-04-02T06:06:56.709Z"
+  },
+  "history": [
+    {
+      "timestamp": "2026-04-02T06:04:31.573Z",
+      "action": "session_end",
+      "feature": null,
+      "details": "Session ended"
+    },
+    {
+      "timestamp": "2026-04-02T06:04:31.642Z",
+      "action": "session_end",
+      "feature": null,
+      "details": "Session ended"
+    },
+    {
+      "timestamp": "2026-04-02T06:06:56.673Z",
+      "action": "session_end",
+      "feature": null,
+      "details": "Session ended"
+    },
+    {
+      "timestamp": "2026-04-02T06:06:56.710Z",
+      "action": "session_end",
+      "feature": null,
+      "details": "Session ended"
+    }
+  ]
+}

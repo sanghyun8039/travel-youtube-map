@@ -57,6 +57,14 @@ export default function ResultClient({ initialResult }: Props) {
         </div>
       </header>
 
+      {/* 모바일 안내 배너 */}
+      <div className="md:hidden bg-amber-900/20 border-b border-amber-900/50 px-6 py-3 flex items-center gap-3">
+        <span className="text-lg">⚠️</span>
+        <p className="text-xs text-amber-200 leading-tight">
+          이 서비스는 지도와 타임라인 연동을 위해 데스크탑 환경에 최적화되어 있습니다. 원활한 이용을 위해 PC에서 접속해주세요.
+        </p>
+      </div>
+
       {/* 메인 컨텐츠 (2컬럼 레이아웃) */}
       <div className="flex flex-1 overflow-hidden">
         {/* 좌측 패널 (400px 고정) */}

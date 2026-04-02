@@ -1,28 +1,28 @@
-import { execSync } from 'child_process'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
+
+const execAsync = promisify(exec)
 
 export async function extractKeyframes(videoId: string): Promise<string[]> {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'keyframes-'))
 
   try {
-    // Download video segments via yt-dlp and extract frames every 30s using ffmpeg
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`
-    const videoPath = path.join(tmpDir, 'video.mp4')
+    
+    // Get direct stream URL using yt-dlp -g
+    const { stdout: streamUrl } = await execAsync(`yt-dlp -g -f "bestvideo[ext=mp4]/best[ext=mp4]/best" "${videoUrl}"`)
+    const cleanUrl = streamUrl.trim()
 
-    // Download video (max quality that has video stream)
-    execSync(
-      `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" -o "${videoPath}" "${videoUrl}"`,
-      { stdio: 'pipe' }
-    )
-
-    // Extract frames every 30 seconds
+    // Extract frames every 30 seconds directly from stream
     const framesDir = path.join(tmpDir, 'frames')
     await fs.mkdir(framesDir)
-    execSync(
-      `ffmpeg -i "${videoPath}" -vf "fps=1/30" "${path.join(framesDir, 'frame_%04d.jpg')}" -y`,
-      { stdio: 'pipe' }
+    
+    // We limit to 20 minutes (1200s) to avoid excessive resource usage
+    await execAsync(
+      `ffmpeg -i "${cleanUrl}" -t 1200 -vf "fps=1/30" "${path.join(framesDir, 'frame_%04d.jpg')}" -y`
     )
 
     // Read frames and convert to base64
@@ -38,6 +38,9 @@ export async function extractKeyframes(videoId: string): Promise<string[]> {
     )
 
     return base64Frames
+  } catch (error) {
+    console.error('Keyframe extraction failed:', error)
+    return []
   } finally {
     // Cleanup temp directory
     await fs.rm(tmpDir, { recursive: true, force: true })
