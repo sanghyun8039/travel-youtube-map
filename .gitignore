@@ -1,0 +1,28 @@
+# Worktrees
+.worktrees/
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build
+dist/
+build/
+
+# OS
+.DS_Store
+
+# Temp files
+/tmp/travel-map-sessions/
+
+# Logs
+*.log
+npm-debug.log*

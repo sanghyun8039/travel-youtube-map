@@ -245,6 +245,7 @@ export interface TimelineItem {
   description: string  // 한 줄 설명
   lat: number
   lng: number
+  hasCoords: boolean   // false이면 geocoding 실패 → 지도 마커 미표시
 }
 
 export interface AnalysisResult {
@@ -585,6 +586,7 @@ import { promisify } from 'util'
 import fs from 'fs/promises'
 import path from 'path'
 import OpenAI from 'openai'
+import { formatTimestamp } from './format'
 
 const execAsync = promisify(exec)
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -610,14 +612,8 @@ export async function transcribeWithWhisper(audioPath: string): Promise<string> 
   })
 
   return transcription.segments
-    ?.map((s) => `[${formatSegmentTime(s.start)}] ${s.text.trim()}`)
+    ?.map((s) => `[${formatTimestamp(Math.floor(s.start))}] ${s.text.trim()}`)
     .join('\n') ?? transcription.text
-}
-
-function formatSegmentTime(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
 export async function cleanupAudio(audioPath: string): Promise<void> {
@@ -705,6 +701,138 @@ Expected: 오류 없음
 ```bash
 git add lib/keyframes.ts
 git commit -m "feat: add ffmpeg keyframe extraction (1 frame per 30s)"
+```
+
+---
+
+## Task 7b: Whisper + Keyframes 유닛 테스트
+
+**/plan-eng-review에서 추가됨 — 고위험 shell exec 모듈 커버리지**
+
+**Files:**
+- Create: `__tests__/lib/whisper.test.ts`, `__tests__/lib/keyframes.test.ts`
+
+- [ ] **Step 1: whisper.ts 테스트 작성**
+
+`__tests__/lib/whisper.test.ts`:
+```ts
+import { downloadAudio, transcribeWithWhisper, cleanupAudio } from '@/lib/whisper'
+import * as child_process from 'child_process'
+import * as fs from 'fs/promises'
+
+jest.mock('child_process', () => ({ exec: jest.fn() }))
+jest.mock('fs/promises')
+jest.mock('openai', () => ({
+  default: jest.fn().mockImplementation(() => ({
+    audio: {
+      transcriptions: {
+        create: jest.fn().mockResolvedValue({
+          segments: [
+            { start: 5.0, text: '안녕하세요' },
+            { start: 32.0, text: '서울입니다' },
+          ],
+          text: '안녕하세요 서울입니다',
+        }),
+      },
+    },
+  })),
+}))
+
+const { promisify } = jest.requireActual('util')
+
+describe('downloadAudio', () => {
+  it('calls yt-dlp and returns output path', async () => {
+    const execMock = child_process.exec as jest.Mock
+    execMock.mockImplementation((_cmd: string, cb: Function) => cb(null, '', ''))
+
+    const path = await downloadAudio('abc123')
+    expect(path).toBe('/tmp/travel-map-audio-abc123.mp3')
+    expect(execMock).toHaveBeenCalledWith(
+      expect.stringContaining('yt-dlp'),
+      expect.any(Function)
+    )
+  })
+
+  it('throws on exec failure', async () => {
+    const execMock = child_process.exec as jest.Mock
+    execMock.mockImplementation((_cmd: string, cb: Function) => cb(new Error('yt-dlp not found'), '', ''))
+    await expect(downloadAudio('abc123')).rejects.toThrow('yt-dlp not found')
+  })
+})
+
+describe('transcribeWithWhisper', () => {
+  it('returns formatted transcript with timestamps', async () => {
+    ;(fs.readFile as jest.Mock).mockResolvedValue(Buffer.from('fake-audio'))
+    const result = await transcribeWithWhisper('/tmp/test.mp3')
+    expect(result).toContain('00:05')
+    expect(result).toContain('안녕하세요')
+    expect(result).toContain('00:32')
+  })
+})
+
+describe('cleanupAudio', () => {
+  it('deletes the file silently', async () => {
+    ;(fs.unlink as jest.Mock).mockResolvedValue(undefined)
+    await expect(cleanupAudio('/tmp/test.mp3')).resolves.not.toThrow()
+  })
+
+  it('ignores ENOENT if file is already gone', async () => {
+    ;(fs.unlink as jest.Mock).mockRejectedValue(Object.assign(new Error(), { code: 'ENOENT' }))
+    await expect(cleanupAudio('/tmp/test.mp3')).resolves.not.toThrow()
+  })
+})
+```
+
+- [ ] **Step 2: keyframes.ts 테스트 작성**
+
+`__tests__/lib/keyframes.test.ts`:
+```ts
+import { extractKeyframes } from '@/lib/keyframes'
+import * as child_process from 'child_process'
+import * as fs from 'fs/promises'
+
+jest.mock('child_process', () => ({ exec: jest.fn() }))
+jest.mock('fs/promises')
+
+describe('extractKeyframes', () => {
+  it('returns base64 frames from extracted jpegs', async () => {
+    const execMock = child_process.exec as jest.Mock
+    // yt-dlp returns stream URL
+    execMock.mockImplementationOnce((_cmd: string, cb: Function) => cb(null, 'https://stream.url/video.mp4\n', ''))
+    // ffmpeg succeeds
+    execMock.mockImplementationOnce((_cmd: string, cb: Function) => cb(null, '', ''))
+
+    ;(fs.mkdir as jest.Mock).mockResolvedValue(undefined)
+    ;(fs.readdir as jest.Mock).mockResolvedValue(['frame001.jpg', 'frame002.jpg'])
+    ;(fs.readFile as jest.Mock).mockResolvedValue(Buffer.from('fake-image-data'))
+    ;(fs.rm as jest.Mock).mockResolvedValue(undefined)
+
+    const frames = await extractKeyframes('abc123')
+    expect(frames).toHaveLength(2)
+    expect(typeof frames[0]).toBe('string')  // base64
+  })
+
+  it('throws on yt-dlp failure', async () => {
+    const execMock = child_process.exec as jest.Mock
+    execMock.mockImplementationOnce((_cmd: string, cb: Function) => cb(new Error('yt-dlp failed'), '', ''))
+    ;(fs.mkdir as jest.Mock).mockResolvedValue(undefined)
+    await expect(extractKeyframes('abc123')).rejects.toThrow('yt-dlp failed')
+  })
+})
+```
+
+- [ ] **Step 3: 테스트 실행**
+
+```bash
+npx jest __tests__/lib/whisper.test.ts __tests__/lib/keyframes.test.ts
+```
+Expected: PASS (6 tests)
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add __tests__/lib/whisper.test.ts __tests__/lib/keyframes.test.ts
+git commit -m "test: add unit tests for whisper and keyframe extraction"
 ```
 
 ---
@@ -1008,23 +1136,25 @@ export async function POST(req: NextRequest) {
         const rawLocations = await extractLocations(transcript, keyframes)
         send({ step: 'llm', status: 'done', count: rawLocations.length })
 
-        // 6. 좌표 변환
+        // 6. 좌표 변환 (병렬 처리로 성능 최적화)
         send({ step: 'geocoding', status: 'fetching' })
-        const items: TimelineItem[] = []
-        for (const loc of rawLocations) {
-          const coords = await geocodePlace(`${loc.place}, ${loc.city}, ${loc.country}`)
-          items.push({
-            id: uuidv4(),
-            timestamp: loc.timestamp,
-            place: loc.place,
-            city: loc.city,
-            country: loc.country,
-            countryCode: loc.countryCode,
-            description: loc.description,
-            lat: coords?.lat ?? 0,
-            lng: coords?.lng ?? 0,
+        const items: TimelineItem[] = await Promise.all(
+          rawLocations.map(async (loc) => {
+            const coords = await geocodePlace(`${loc.place}, ${loc.city}, ${loc.country}`)
+            return {
+              id: uuidv4(),
+              timestamp: loc.timestamp,
+              place: loc.place,
+              city: loc.city,
+              country: loc.country,
+              countryCode: loc.countryCode,
+              description: loc.description,
+              lat: coords?.lat ?? 0,
+              lng: coords?.lng ?? 0,
+              hasCoords: !!coords,
+            }
           })
-        }
+        )
         send({ step: 'geocoding', status: 'done' })
 
         // 7. 저장 및 완료
@@ -1407,8 +1537,13 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(
       }
 
       if (window.YT?.Player) {
+        // API already loaded (e.g. React Strict Mode second mount)
         createPlayer()
+      } else if (document.querySelector('script[src*="iframe_api"]')) {
+        // Script tag exists but not ready yet — just set callback
+        window.onYouTubeIframeAPIReady = createPlayer
       } else {
+        // First load
         const tag = document.createElement('script')
         tag.src = 'https://www.youtube.com/iframe_api'
         document.head.appendChild(tag)
@@ -1586,6 +1721,7 @@ export default function TimelineEditForm({ mode, item, onSave, onCancel }: Props
       description,
       lat: item?.lat ?? 0,
       lng: item?.lng ?? 0,
+      hasCoords: item?.hasCoords ?? false,  // 수동 추가 아이템은 좌표 없음
     })
   }
 
@@ -1780,6 +1916,12 @@ describe('TimelineList', () => {
     fireEvent.click(screen.getByText('새 장소 추가하기'))
     expect(screen.getByText('새 장소 추가')).toBeInTheDocument()
   })
+
+  it('shows empty state when items is empty', () => {
+    render(<TimelineList items={[]} activeTimestamp={0} onItemClick={jest.fn()} onItemsChange={jest.fn()} onMarkerFocus={jest.fn()} />)
+    expect(screen.getByText('방문 장소를 찾지 못했어요')).toBeInTheDocument()
+    expect(screen.getByText('직접 추가하기')).toBeInTheDocument()
+  })
 })
 ```
 
@@ -1845,6 +1987,24 @@ export default function TimelineList({ items, activeTimestamp, onItemClick, onIt
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {items.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center px-6 py-10">
+            <span className="text-5xl mb-4 opacity-30">📍</span>
+            <p className="text-white font-semibold text-sm mb-1">방문 장소를 찾지 못했어요</p>
+            <p className="text-gray-500 text-xs mb-5">영상에 장소 설명이 부족하거나 자막이 없을 수 있어요</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="bg-red-500 text-white text-xs px-4 py-2 rounded-lg font-semibold"
+              >
+                직접 추가하기
+              </button>
+              <a href="/" className="bg-[#2a2a2a] text-gray-400 text-xs px-4 py-2 rounded-lg">
+                새 영상 분석
+              </a>
+            </div>
+          </div>
+        )}
         {items.map((item) => (
           <TimelineItemRow
             key={item.id}
@@ -1943,14 +2103,14 @@ function MapContent({ items, focusedItemId, onMarkerClick }: Props) {
   useEffect(() => {
     if (!map || !focusedItemId) return
     const item = items.find((i) => i.id === focusedItemId)
-    if (item && item.lat !== 0) {
+    if (item && item.hasCoords) {
       map.panTo({ lat: item.lat, lng: item.lng })
       map.setZoom(14)
       setSelectedId(focusedItemId)
     }
   }, [map, focusedItemId, items])
 
-  const validItems = items.filter((i) => i.lat !== 0 && i.lng !== 0)
+  const validItems = items.filter((i) => i.hasCoords)
   const selected = validItems.find((i) => i.id === selectedId)
 
   return (
@@ -1987,7 +2147,7 @@ function MapContent({ items, focusedItemId, onMarkerClick }: Props) {
 }
 
 export default function MapView({ items, focusedItemId, onMarkerClick }: Props) {
-  const center = items.find((i) => i.lat !== 0)
+  const center = items.find((i) => i.hasCoords)
   const defaultCenter = center ? { lat: center.lat, lng: center.lng } : { lat: 37.5665, lng: 126.9780 }
 
   return (
@@ -2255,6 +2415,12 @@ export default function BlogGenerator({ items, videoTitle }: Props) {
   const [copied, setCopied] = useState(false)
   const hasStarted = useRef(false)
 
+  // 렌더 후 자동 시작 — useEffect로 처리해야 React 규칙 준수
+  useEffect(() => {
+    if (!hasStarted.current) generate()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function generate() {
     if (isGenerating || hasStarted.current) return
     hasStarted.current = true
@@ -2287,10 +2453,6 @@ export default function BlogGenerator({ items, videoTitle }: Props) {
     await navigator.clipboard.writeText(content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }
-
-  if (!hasStarted.current && !content) {
-    generate()
   }
 
   return (
@@ -2369,11 +2531,15 @@ export function validateEnv(): void {
 
 - [ ] **Step 2: `/api/analyze` 라우트 상단에 검증 추가**
 
-`app/api/analyze/route.ts` 상단 `POST` 함수 내부 첫 줄에 추가:
+`app/api/analyze/route.ts` — `POST` 함수 최상단 (stream 열기 전)에 추가:
 ```ts
 import { validateEnv } from '@/lib/validateEnv'
-// POST 함수 내 stream start() 의 첫 번째 라인:
-validateEnv()
+
+export async function POST(req: NextRequest) {
+  // 스트림 열기 전에 검증 — 실패 시 500 HTTP 응답 (SSE 이벤트가 아님)
+  validateEnv()
+  const { url } = await req.json()
+  // ... 나머지 동일
 ```
 
 - [ ] **Step 3: 404 페이지 구현**
@@ -2426,11 +2592,11 @@ git commit -m "feat: add env validation and 404 page"
 |--------|---------|-----|------|--------|----------|
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
 | Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 0 | — | — |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 7 issues, 0 critical gaps |
 | Design Review | `/plan-design-review` | UI/UX gaps | 1 | issues_open | score: 5/10 → 8/10, 4 decisions |
 
 **UNRESOLVED:** 0
-**VERDICT:** Design review complete. Eng review required before implementation.
+**VERDICT:** ENG CLEARED — ready to implement.
 
 ---
 
