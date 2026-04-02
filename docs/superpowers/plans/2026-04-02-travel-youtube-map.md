@@ -67,6 +67,75 @@ travel-youtube-map/
 
 ---
 
+## 디자인 토큰 (Design System)
+
+**/design-review에서 추가됨 — Tailwind `tailwind.config.ts`에 반영**
+
+브레인스토밍에서 확정된 다크 테마 기준:
+
+```ts
+// tailwind.config.ts colors 확장
+colors: {
+  surface: {
+    base:    '#0f0f0f',  // 최하단 배경
+    panel:   '#141414',  // 좌측 패널
+    card:    '#1a1a1a',  // 카드/섹션
+    hover:   '#1e1e1e',  // 호버 상태
+    input:   '#2a2a2a',  // 입력 필드
+    border:  '#2a2a2a',  // 구분선
+  },
+  accent: {
+    red:     '#ef4444',  // 주요 액션, 마커, 활성 타임라인
+    orange:  '#f97316',  // 선택된 마커
+    blue:    '#1d4ed8',  // 수정 버튼
+  },
+  text: {
+    primary:   '#e5e5e5',
+    secondary: '#9ca3af',
+    muted:     '#6b7280',
+  }
+}
+```
+
+**폰트**: Inter (Next.js 기본 로드). 타임스탬프 배지는 `font-mono`.
+
+**카드 금지**: `TimelineList`는 카드 그리드가 아닌 **행(row) 스타일**로 구현. 배경이 있는 카드 박스 사용 금지. 구분선은 `border-b border-[#1e1e1e]`로만 처리.
+
+**간격**: Tailwind 기본 스케일 사용. 패널 내부 패딩 `px-4 py-3`.
+
+**브레이크포인트**: MVP는 **데스크탑 전용** (`min-width: 900px`). 모바일 접속 시 `app/layout.tsx`에서 `<meta name="viewport">`에 `minimum-scale=1`을 유지하되, 결과 화면에 "이 서비스는 데스크탑에서 이용해주세요" 안내 배너를 `md:hidden` 블록으로 추가. 반응형 레이아웃은 v2 범위.
+
+---
+
+## UI 상태 스펙 (State Coverage)
+
+**/design-review에서 추가됨 — 구현 시 반드시 반영**
+
+### 타임라인 빈 상태 (0개 장소 추출됨)
+`TimelineList` — items.length === 0 일 때:
+```
+📍 아이콘 (크게, 흐릿하게)
+방문 장소를 찾지 못했어요
+영상에 장소 설명이 부족하거나 자막이 없을 수 있어요
+[직접 추가하기] (빨간 버튼)  [새 영상 분석] (회색 버튼)
+```
+
+### 분석 에러 상태 (`/analyze` 페이지)
+- **비공개/삭제 영상**: 빨간 테두리 카드 + "이 영상은 접근할 수 없어요" + "다른 URL 시도하기" 버튼
+- **자막+Whisper 모두 실패**: 노란 경고 카드 + "음성을 인식할 수 없었어요. 직접 장소를 입력할 수 있어요" + 결과 화면으로 이동(빈 타임라인) 버튼
+- **API 키 없음**: 빨간 카드 + "서버 설정 오류 — .env.local 환경변수를 확인해주세요"
+
+### 좌표 변환 실패한 아이템
+지도 마커 없이 타임라인 리스트에만 표시. 아이템 행에 `🔍 지도 없음` 배지(회색) 표시. 마커 없는 아이템도 클릭 시 VideoPlayer.seekTo는 정상 동작.
+
+### 블로그 생성 실패
+"블로그 생성에 실패했어요" + 재시도 버튼. 빈 컨텐츠 영역 유지 (레이아웃 깨지지 않게).
+
+### 키프레임 추출 실패 (분석 진행 중)
+분석 진행 화면에서 `⚠️ 키프레임 없이 계속 진행합니다` 노란 인라인 경고 후 다음 단계 자동 진행. 사용자가 취소할 필요 없음.
+
+---
+
 ## Task 1: 프로젝트 초기화
 
 **Files:**
@@ -2348,6 +2417,20 @@ Expected: `✓ Compiled successfully`
 git add lib/validateEnv.ts app/not-found.tsx app/api/analyze/route.ts
 git commit -m "feat: add env validation and 404 page"
 ```
+
+---
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 0 | — | — |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | issues_open | score: 5/10 → 8/10, 4 decisions |
+
+**UNRESOLVED:** 0
+**VERDICT:** Design review complete. Eng review required before implementation.
 
 ---
 
