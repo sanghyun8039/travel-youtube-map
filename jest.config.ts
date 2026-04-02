@@ -3,6 +3,10 @@ import nextJest from 'next/jest.js'
 
 const createJestConfig = nextJest({ dir: './' })
 
+const nextTransform = {
+  '^.+\\.(js|jsx|ts|tsx|mjs)$': require.resolve('next/dist/build/swc/jest-transformer'),
+}
+
 const config: Config = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: { '^@/(.*)$': '<rootDir>/$1' },
@@ -13,6 +17,7 @@ const config: Config = {
       testEnvironment: 'node',
       testMatch: ['**/__tests__/lib/**/*.test.ts'],
       moduleNameMapper: { '^@/(.*)$': '<rootDir>/$1' },
+      transform: nextTransform,
     },
     {
       displayName: 'jsdom',
@@ -20,6 +25,7 @@ const config: Config = {
       testMatch: ['**/__tests__/components/**/*.test.tsx'],
       setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
       moduleNameMapper: { '^@/(.*)$': '<rootDir>/$1' },
+      transform: nextTransform,
     },
   ],
 }
