@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Travel YouTube Map
 
-## Getting Started
+YouTube 여행 영상을 분석하여 방문 장소를 자동으로 추출하고, 인터랙티브 지도와 타임라인으로 시각화하는 Next.js 앱입니다.
 
-First, run the development server:
+## 주요 기능
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **자동 장소 추출** — YouTube URL 입력 → Claude AI가 자막/음성에서 방문 장소 파싱
+- **인터랙티브 지도** — 방문 순서 번호 마커, 경로 폴리라인, 마커 클릭으로 영상 해당 시점으로 이동
+- **타임라인 편집** — 장소 추가/수정/삭제, 주소 검색으로 지오코딩 자동 완성
+- **리사이즈 패널** — 타임라인과 지도 영역 너비 드래그 조절
+- **블로그 생성** — 분석된 여행 정보를 네이버 블로그 형식으로 자동 작성 (Claude Streaming)
+
+## 기술 스택
+
+- **Frontend:** Next.js 14 App Router + TypeScript + Tailwind CSS
+- **지도:** Google Maps JavaScript API (`@vis.gl/react-google-maps`)
+- **AI:** Claude API (`claude-3-5-sonnet`) — 장소 추출 + 블로그 생성
+- **STT:** YouTube 자막 우선, fallback으로 OpenAI Whisper
+- **미디어:** yt-dlp + ffmpeg (키프레임/오디오 추출)
+- **지오코딩:** Google Geocoding API
+
+## 시작하기
+
+### 환경 변수 설정
+
+`.env.local` 파일을 생성하고 아래 값을 입력하세요:
+
+```env
+ANTHROPIC_API_KEY=your-anthropic-api-key
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+OPENAI_API_KEY=your-openai-api-key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 의존성 설치 및 실행
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`http://localhost:3000`에서 앱을 확인하세요.
 
-## Learn More
+### 시스템 의존성
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# macOS
+brew install yt-dlp ffmpeg
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 테스트
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npx jest
+```
 
-## Deploy on Vercel
+## 프로젝트 구조
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/
+  api/analyze/    SSE 스트리밍 분석 파이프라인
+  api/blog/       블로그 생성 SSE 엔드포인트
+  result/[id]/    분석 결과 페이지 (지도 + 타임라인)
+components/
+  MapView.tsx     Google Maps 인터랙티브 지도
+  TimelineList    타임라인 목록 + 편집 폼
+lib/
+  geocoder.ts     Google Geocoding API 래퍼
+  keyframes.ts    ffmpeg 키프레임 추출
+  whisper.ts      OpenAI Whisper STT
+```
