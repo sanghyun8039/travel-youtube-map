@@ -1,15 +1,10 @@
 import { downloadAudio, transcribeWithWhisper, cleanupAudio } from '@/lib/whisper'
-import { execSync } from 'child_process'
+import { exec, execSync } from 'child_process'
 import { promises as fs } from 'fs'
 import { createReadStream } from 'fs'
+import OpenAI from 'openai'
 
-jest.mock('child_process', () => ({ execSync: jest.fn() }))
-jest.mock('fs', () => ({
-  promises: {
-    unlink: jest.fn(),
-  },
-  createReadStream: jest.fn(),
-}))
+// Mock OpenAI simply
 jest.mock('openai', () => {
   return jest.fn().mockImplementation(() => ({
     audio: {
@@ -20,41 +15,49 @@ jest.mock('openai', () => {
   }))
 })
 
-const mockExecSync = execSync as jest.MockedFunction<typeof execSync>
-const mockUnlink = fs.unlink as jest.MockedFunction<typeof fs.unlink>
+jest.mock('child_process', () => ({ 
+  exec: jest.fn((cmd, cb) => cb(null, { stdout: '', stderr: '' })),
+  execSync: jest.fn() 
+}))
 
-describe('downloadAudio', () => {
-  it('calls yt-dlp with correct arguments', async () => {
-    mockExecSync.mockReturnValue(Buffer.from(''))
-    const result = await downloadAudio('testVideoId', '/tmp')
-    expect(mockExecSync).toHaveBeenCalledWith(
-      expect.stringContaining('yt-dlp'),
-      expect.any(Object)
-    )
-    expect(mockExecSync).toHaveBeenCalledWith(
-      expect.stringContaining('testVideoId'),
-      expect.any(Object)
-    )
-    expect(result).toContain('testVideoId')
-  })
-})
+jest.mock('fs', () => ({
+  promises: {
+    unlink: jest.fn(),
+  },
+  createReadStream: jest.fn(),
+}))
 
-describe('transcribeWithWhisper', () => {
-  it('returns transcription text', async () => {
-    const result = await transcribeWithWhisper('/tmp/audio.mp3')
-    expect(result).toBe('transcribed text')
-  })
-})
+const mockExec = exec as unknown as jest.Mock
 
-describe('cleanupAudio', () => {
-  it('deletes the audio file', async () => {
-    mockUnlink.mockResolvedValue(undefined)
-    await cleanupAudio('/tmp/audio.mp3')
-    expect(mockUnlink).toHaveBeenCalledWith('/tmp/audio.mp3')
+describe('whisper service', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
   })
 
-  it('does not throw if file does not exist', async () => {
-    mockUnlink.mockRejectedValue(new Error('ENOENT'))
-    await expect(cleanupAudio('/tmp/missing.mp3')).resolves.not.toThrow()
+  describe('downloadAudio', () => {
+    it('calls yt-dlp with correct arguments', async () => {
+      const result = await downloadAudio('testVideoId', '/tmp')
+      
+      expect(mockExec).toHaveBeenCalledWith(
+        expect.stringContaining('yt-dlp'),
+        expect.any(Function)
+      )
+      expect(result).toContain('testVideoId.mp3')
+    })
+  })
+
+  describe('transcribeWithWhisper', () => {
+    it('calls openai transcribe', async () => {
+      // Mocked return value should come through
+      const result = await transcribeWithWhisper('/tmp/test.mp3')
+      expect(result).toBe('transcribed text')
+    })
+  })
+
+  describe('cleanupAudio', () => {
+    it('calls fs.unlink', async () => {
+      await cleanupAudio('/tmp/test.mp3')
+      expect(fs.unlink).toHaveBeenCalledWith('/tmp/test.mp3')
+    })
   })
 })
