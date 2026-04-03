@@ -24,7 +24,7 @@ export default function TimelineItemRow({
   onConfirmDelete, onCancelDelete,
 }: Props) {
   return (
-    <>
+    <div id={`timeline-item-${item.id}`}>
       <div
         onClick={onClick}
         className={`flex items-start gap-3 px-4 py-3 cursor-pointer border-l-[3px] transition-all group ${
@@ -46,6 +46,11 @@ export default function TimelineItemRow({
               {getFlagEmoji(item.countryCode)} {item.city}
             </span>
           </div>
+          {item.address && (
+            <p className="text-[10px] text-gray-500 truncate mb-0.5 opacity-80 flex items-center gap-1">
+              <span className="scale-75 origin-left">📍</span> {item.address}
+            </p>
+          )}
           <p className="text-[11px] text-gray-500 truncate leading-relaxed">{item.description}</p>
         </div>
 
@@ -93,6 +98,6 @@ export default function TimelineItemRow({
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

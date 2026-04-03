@@ -2,6 +2,7 @@ export interface TimelineItem {
   id: string           // uuid v4
   timestamp: number    // seconds (e.g. 468 → "07:48")
   place: string        // place name (e.g. "명동 거리")
+  address?: string     // 상세 주소 (추가)
   city: string         // city (e.g. "서울")
   country: string      // country (e.g. "대한민국")
   countryCode: string  // ISO 2-letter code (e.g. "KR")

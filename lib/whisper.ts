@@ -1,4 +1,5 @@
-import { exec } from 'child_process'
+import * as child_process from 'child_process'
+const exec = child_process.exec
 import { promisify } from 'util'
 import { createReadStream } from 'fs'
 import { promises as fs } from 'fs'
