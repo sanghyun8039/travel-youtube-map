@@ -85,9 +85,9 @@ ${locationsStr}
           }
         }
         controller.enqueue(encoder.encode('data: {"done": true}\n\n'));
-      } catch (err: any) {
+      } catch (err) {
         console.error("Blog generation error:", err);
-        const errorMsg = err.message || "블로그 생성 중 오류가 발생했습니다.";
+        const errorMsg = err instanceof Error ? err.message : "블로그 생성 중 오류가 발생했습니다.";
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify({ error: errorMsg })}\n\n`),
         );

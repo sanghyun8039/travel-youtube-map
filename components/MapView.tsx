@@ -76,7 +76,7 @@ function MapUpdater({ items, focusedItemId }: Props) {
 
     polyline.setMap(map)
     return () => polyline.setMap(null)
-  }, [map, items.length])
+  }, [map, items]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return null
 }
