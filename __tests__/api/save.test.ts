@@ -56,7 +56,7 @@ const validBody = {
 describe('POST /api/save', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockTransaction.mockImplementation(async (fn: Function) => {
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
         channel: { upsert: jest.fn().mockResolvedValue({ id: 'channel-uuid' }) },
         video: { upsert: jest.fn().mockResolvedValue({ id: 'video-uuid' }) },
