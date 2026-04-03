@@ -30,3 +30,25 @@ export async function fetchVideoTitle(videoId: string): Promise<string> {
   const data = await res.json()
   return data.title as string
 }
+
+export interface ChannelInfo {
+  channelId: string   // URL 마지막 세그먼트 (@handle 또는 UCxxxx)
+  channelName: string
+  channelUrl: string
+}
+
+export async function fetchChannelInfo(videoId: string): Promise<ChannelInfo> {
+  const res = await fetch(
+    `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+  )
+  if (!res.ok) throw new Error(`oEmbed failed: ${res.status}`)
+  const data = await res.json()
+  const channelUrl = data.author_url as string
+  const parts = channelUrl.replace(/\/$/, '').split('/')
+  const channelId = parts[parts.length - 1]
+  return {
+    channelId,
+    channelName: data.author_name as string,
+    channelUrl,
+  }
+}
