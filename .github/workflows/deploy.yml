@@ -12,6 +12,11 @@ jobs:
       - name: 코드 가져오기
         uses: actions/checkout@v3
 
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: 환경변수 파일(.env) 생성
         run: |
           echo "DATABASE_URL=postgresql://postgres:pi@127.0.0.1:5432/travel_youtube_map" > .env
@@ -20,8 +25,11 @@ jobs:
           echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
           echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
 
+      - name: 패키지 설치
+        run: npm install
+
       - name: DB 마이그레이션
-        run: npx dotenv -e .env -- npx prisma db push
+        run: npx --yes dotenv-cli -e .env -- npx --yes prisma db push
 
       - name: 기존 서버 끄기 (있다면)
         continue-on-error: true
