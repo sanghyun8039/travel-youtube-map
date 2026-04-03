@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { formatTimestamp } from '@/lib/format'
 import type { TimelineItem } from '@/lib/types'
+import { geocodePlace } from '@/lib/geocoder'
 
 function parseTimestamp(value: string): number {
   const parts = value.split(':').map(Number)
@@ -24,28 +25,54 @@ export default function TimelineEditForm({ mode, item, onSave, onCancel }: Props
     item ? formatTimestamp(item.timestamp) : ''
   )
   const [place, setPlace] = useState(item?.place ?? '')
+  const [address, setAddress] = useState(item?.address ?? '')
   const [city, setCity] = useState(item?.city ?? '')
   const [country, setCountry] = useState(item?.country ?? '')
   const [countryCode, setCountryCode] = useState(item?.countryCode ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
+  const [coords, setCoords] = useState({ lat: item?.lat ?? 0, lng: item?.lng ?? 0 })
+  const [hasCoords, setHasCoords] = useState(item?.hasCoords ?? false)
+  const [isSearching, setIsSearching] = useState(false)
+
+  async function handleSearchAddress() {
+    if (!address && !place) return
+    if (isSearching) return
+
+    setIsSearching(true)
+    const result = await geocodePlace(address || place)
+    setIsSearching(false)
+
+    if (result) {
+      setAddress(result.address)
+      setCity(result.city)
+      setCountry(result.country)
+      setCountryCode(result.countryCode)
+      setCoords({ lat: result.lat, lng: result.lng })
+      setHasCoords(true)
+      if (!place) setPlace(result.address.split(',')[0]) // 장소명이 비어있으면 주소 첫 부분 사용
+    } else {
+      alert('주소 정보를 찾을 수 없습니다. 직접 입력해 주세요.')
+    }
+  }
 
   function handleSave() {
     onSave({
       id: item?.id ?? uuidv4(),
       timestamp: parseTimestamp(timestampStr),
       place,
+      address,
       city,
       country,
       countryCode: countryCode.toUpperCase().slice(0, 2),
       description,
-      lat: item?.lat ?? 0,
-      lng: item?.lng ?? 0,
-      hasCoords: item?.hasCoords ?? false,
+      lat: coords.lat,
+      lng: coords.lng,
+      hasCoords: hasCoords,
     })
   }
 
   const labelCls = 'text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1 block'
-  const inputCls = 'w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-md px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ef4444] transition-colors placeholder-gray-700'
+  const inputCls = 'w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-md px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ef4444] transition-colors placeholder-gray-700 disabled:opacity-50'
 
   return (
     <div className={`mx-4 my-2 rounded-xl p-4 border shadow-xl ${
@@ -86,6 +113,27 @@ export default function TimelineEditForm({ mode, item, onSave, onCancel }: Props
           onChange={(e) => setPlace(e.target.value)} 
           placeholder="예: 경복궁, 에펠탑" 
         />
+      </div>
+
+      <div className="mb-4">
+        <label className={labelCls}>상세 주소</label>
+        <div className="flex gap-2">
+          <input 
+            className={inputCls} 
+            value={address} 
+            onChange={(e) => setAddress(e.target.value)} 
+            onKeyDown={(e) => e.key === 'Enter' && handleSearchAddress()}
+            placeholder="주소 입력 후 검색 버튼 클릭" 
+          />
+          <button 
+            onClick={handleSearchAddress}
+            disabled={isSearching}
+            className="px-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-md text-sm hover:bg-[#252525] transition-colors disabled:opacity-50"
+            title="주소로 정보 자동 채우기"
+          >
+            {isSearching ? '...' : '🔍'}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-4">
