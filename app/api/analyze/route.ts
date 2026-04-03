@@ -83,12 +83,14 @@ export async function POST(req: NextRequest) {
               id: uuidv4(),
               timestamp: loc.timestamp,
               place: loc.place,
-              city: loc.city,
-              country: loc.country,
-              countryCode: loc.countryCode,
+              city: coords?.city ?? loc.city,
+              country: coords?.country ?? loc.country,
+              countryCode: coords?.countryCode ?? loc.countryCode,
+              address: coords?.address,
               description: loc.description,
               lat: coords?.lat ?? 0,
               lng: coords?.lng ?? 0,
+              googlePlaceId: coords?.googlePlaceId,
               hasCoords: !!coords,
             }
           })

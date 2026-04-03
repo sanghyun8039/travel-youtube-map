@@ -15,7 +15,7 @@ jobs:
       - name: Node.js 설정
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: 환경변수 파일(.env) 생성
         run: |

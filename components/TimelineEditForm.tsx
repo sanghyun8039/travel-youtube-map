@@ -31,6 +31,7 @@ export default function TimelineEditForm({ mode, item, onSave, onCancel }: Props
   const [countryCode, setCountryCode] = useState(item?.countryCode ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
   const [coords, setCoords] = useState({ lat: item?.lat ?? 0, lng: item?.lng ?? 0 })
+  const [googlePlaceId, setGooglePlaceId] = useState(item?.googlePlaceId ?? '')
   const [hasCoords, setHasCoords] = useState(item?.hasCoords ?? false)
   const [isSearching, setIsSearching] = useState(false)
 
@@ -48,6 +49,7 @@ export default function TimelineEditForm({ mode, item, onSave, onCancel }: Props
       setCountry(result.country)
       setCountryCode(result.countryCode)
       setCoords({ lat: result.lat, lng: result.lng })
+      setGooglePlaceId(result.googlePlaceId)
       setHasCoords(true)
       if (!place) setPlace(result.address.split(',')[0]) // 장소명이 비어있으면 주소 첫 부분 사용
     } else {
@@ -67,6 +69,7 @@ export default function TimelineEditForm({ mode, item, onSave, onCancel }: Props
       description,
       lat: coords.lat,
       lng: coords.lng,
+      googlePlaceId: googlePlaceId || undefined,
       hasCoords: hasCoords,
     })
   }
