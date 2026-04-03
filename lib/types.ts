@@ -10,6 +10,7 @@ export interface TimelineItem {
   lat: number
   lng: number
   hasCoords: boolean   // false = geocoding failed → no map marker shown
+  googlePlaceId?: string  // Places API에서 취득한 고유 ID
 }
 
 export interface AnalysisResult {

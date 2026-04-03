@@ -1,73 +1,67 @@
 import { geocodePlace } from '@/lib/geocoder'
 
-global.fetch = jest.fn()
+const mockFetch = jest.fn()
+global.fetch = mockFetch
+
+beforeEach(() => {
+  mockFetch.mockReset()
+  process.env.GOOGLE_MAPS_API_KEY = 'fake-api-key'
+})
+
+function makePlacesResponse(overrides: object = {}) {
+  return {
+    places: [{
+      id: 'ChIJmock',
+      displayName: { text: 'Mock Place' },
+      location: { latitude: 37.5665, longitude: 126.9780 },
+      formattedAddress: 'Mock Address',
+      addressComponents: [],
+      ...overrides,
+    }],
+  }
+}
 
 describe('geocodePlace', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    process.env.GOOGLE_MAPS_API_KEY = 'fake-api-key'
-  })
-
-  it('returns coordinates for a known place', async () => {
-    const mockResponse = {
-      status: 'OK',
-      results: [
-        {
-          geometry: {
-            location: { lat: 37.5665, lng: 126.9780 },
-          },
-        },
-      ],
-    }
-
-    ;(fetch as jest.Mock).mockResolvedValue({
+  it('returns coordinates and googlePlaceId for a known place', async () => {
+    mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockResponse,
+      json: async () => makePlacesResponse(),
     })
 
     const result = await geocodePlace('명동, 서울')
     expect(result).not.toBeNull()
     expect(result!.lat).toBeCloseTo(37.5665)
     expect(result!.lng).toBeCloseTo(126.9780)
+    expect(result!.googlePlaceId).toBe('ChIJmock')
   })
 
-  it('returns null on failure', async () => {
-    ;(fetch as jest.Mock).mockResolvedValue({
+  it('returns null on failure (empty places array)', async () => {
+    mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ status: 'ZERO_RESULTS', results: [] }),
+      json: async () => ({ places: [] }),
     })
-
-    const result = await geocodePlace('non-existent-place-abc-123')
-    expect(result).toBeNull()
+    expect(await geocodePlace('non-existent-place')).toBeNull()
   })
 
   it('returns null when API key is missing', async () => {
     delete process.env.GOOGLE_MAPS_API_KEY
-    const result = await geocodePlace('any')
-    expect(result).toBeNull()
+    expect(await geocodePlace('any')).toBeNull()
   })
 
-  it('parses city, country, countryCode, and address from address_components', async () => {
-    const mockResponse = {
-      status: 'OK',
-      results: [
-        {
-          geometry: { location: { lat: 35.6762, lng: 139.6503 } },
-          formatted_address: '東京都, 日本',
-          address_components: [
-            { types: ['locality'], long_name: '東京都', short_name: '東京都' },
-            { types: ['country'], long_name: 'Japan', short_name: 'JP' },
-          ],
-        },
-      ],
-    }
-    ;(fetch as jest.Mock).mockResolvedValue({
+  it('parses city, country, countryCode from addressComponents', async () => {
+    mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockResponse,
+      json: async () => makePlacesResponse({
+        location: { latitude: 35.6762, longitude: 139.6503 },
+        formattedAddress: '東京都, 日本',
+        addressComponents: [
+          { longText: '東京都', shortText: '東京都', types: ['locality'] },
+          { longText: 'Japan', shortText: 'JP', types: ['country'] },
+        ],
+      }),
     })
 
     const result = await geocodePlace('Tokyo')
-    expect(result).not.toBeNull()
     expect(result!.city).toBe('東京都')
     expect(result!.country).toBe('Japan')
     expect(result!.countryCode).toBe('JP')
@@ -75,22 +69,16 @@ describe('geocodePlace', () => {
   })
 
   it('uses administrative_area_level_1 when locality is absent', async () => {
-    const mockResponse = {
-      status: 'OK',
-      results: [
-        {
-          geometry: { location: { lat: 51.5, lng: -0.1 } },
-          formatted_address: 'London, UK',
-          address_components: [
-            { types: ['administrative_area_level_1'], long_name: 'England', short_name: 'ENG' },
-            { types: ['country'], long_name: 'United Kingdom', short_name: 'GB' },
-          ],
-        },
-      ],
-    }
-    ;(fetch as jest.Mock).mockResolvedValue({
+    mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockResponse,
+      json: async () => makePlacesResponse({
+        location: { latitude: 51.5, longitude: -0.1 },
+        formattedAddress: 'London, UK',
+        addressComponents: [
+          { longText: 'England', shortText: 'ENG', types: ['administrative_area_level_1'] },
+          { longText: 'United Kingdom', shortText: 'GB', types: ['country'] },
+        ],
+      }),
     })
 
     const result = await geocodePlace('London')
@@ -99,23 +87,12 @@ describe('geocodePlace', () => {
   })
 
   it('returns null on network error', async () => {
-    ;(fetch as jest.Mock).mockRejectedValue(new Error('network fail'))
-    const result = await geocodePlace('Tokyo')
-    expect(result).toBeNull()
+    mockFetch.mockRejectedValueOnce(new Error('network fail'))
+    expect(await geocodePlace('Tokyo')).toBeNull()
   })
 
-  it('uses NEXT_PUBLIC_GOOGLE_MAPS_API_KEY when GOOGLE_MAPS_API_KEY is absent', async () => {
-    delete process.env.GOOGLE_MAPS_API_KEY
-    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = 'public-fake-key'
-    ;(fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        status: 'OK',
-        results: [{ geometry: { location: { lat: 1, lng: 2 } }, formatted_address: 'Test', address_components: [] }],
-      }),
-    })
-    const result = await geocodePlace('test')
-    expect(result).not.toBeNull()
-    delete process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  it('returns null on non-ok response', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false })
+    expect(await geocodePlace('test')).toBeNull()
   })
 })
