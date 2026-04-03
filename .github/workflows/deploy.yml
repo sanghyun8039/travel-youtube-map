@@ -1,0 +1,34 @@
+name: Deploy to Raspberry Pi
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: 코드 가져오기
+        uses: actions/checkout@v3
+
+      - name: 환경변수 파일(.env) 생성
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:pi@127.0.0.1:5432/travel_youtube_map" > .env
+          echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+          echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
+          echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
+
+      - name: DB 마이그레이션
+        run: npx dotenv -e .env -- npx prisma db push
+
+      - name: 기존 서버 끄기 (있다면)
+        continue-on-error: true
+        run: docker stop travel-map && docker rm travel-map
+
+      - name: 도커 이미지 빌드
+        run: docker build -t travel-map .
+
+      - name: 서버 실행 (네트워크 호스트 모드)
+        run: docker run -d --name travel-map --network host --restart always travel-map
