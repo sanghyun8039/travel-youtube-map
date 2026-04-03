@@ -18,6 +18,7 @@ export default function ResultClient({ initialResult }: Props) {
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null)
   const [leftWidth, setLeftWidth] = useState(400) // 기본 너비 400px
   const [isResizing, setIsResizing] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   
   const videoPlayerRef = useRef<VideoPlayerHandle>(null)
 
@@ -36,12 +37,29 @@ export default function ResultClient({ initialResult }: Props) {
   const handleMarkerClick = useCallback((item: TimelineItem) => {
     setFocusedItemId(item.id)
     videoPlayerRef.current?.seekTo(item.timestamp)
-    
+
     const element = document.getElementById(`timeline-item-${item.id}`)
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
   }, [])
+
+  const handleSave = useCallback(async () => {
+    setSaveStatus('saving')
+    try {
+      const res = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result),
+      })
+      const data = await res.json()
+      setSaveStatus(data.success ? 'saved' : 'error')
+    } catch {
+      setSaveStatus('error')
+    } finally {
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    }
+  }, [result])
 
   // 드래그 핸들러
   const startResizing = useCallback(() => {
@@ -130,8 +148,18 @@ export default function ResultClient({ initialResult }: Props) {
               onMarkerFocus={setFocusedItemId}
             />
           </div>
-          <div className="p-4 border-t border-[#1a1a1a] bg-[#0a0a0a]">
+          <div className="p-4 border-t border-[#1a1a1a] bg-[#0a0a0a] flex flex-col gap-2">
             <BlogGenerator items={result.items} videoTitle={result.videoTitle} />
+            <button
+              onClick={handleSave}
+              disabled={saveStatus === 'saving'}
+              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white text-[11px] font-bold px-4 py-2 rounded-lg hover:border-[#ef4444] transition-all disabled:opacity-50"
+            >
+              {saveStatus === 'idle' && 'DB에 저장'}
+              {saveStatus === 'saving' && '저장 중...'}
+              {saveStatus === 'saved' && '✓ 저장 완료'}
+              {saveStatus === 'error' && '저장 실패 — 재시도'}
+            </button>
           </div>
         </aside>
 
