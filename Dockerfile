@@ -19,9 +19,7 @@ COPY . .
 RUN npx prisma generate
 
 # 7. 빌드 (Next.js -> .next/standalone)
-# DATABASE_URL은 빌드 타임에 Prisma 초기화용으로만 사용 (런타임은 .env 파일 사용)
-ARG DATABASE_URL=postgresql://postgres:pi@127.0.0.1:5432/travel_youtube_map
-RUN DATABASE_URL=${DATABASE_URL} npm run build
+RUN npm run build
 
 # 8. 서버 실행 포트 알려주기
 EXPOSE 3000
