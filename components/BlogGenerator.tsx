@@ -23,7 +23,8 @@ export default function BlogGenerator({ items, videoTitle }: Props) {
     setError('')
 
     try {
-      const res = await fetch('/api/blog', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+      const res = await fetch(`${baseUrl}/api/blog`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items, videoTitle }),

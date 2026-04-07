@@ -37,7 +37,8 @@ function AnalyzeContent() {
     const controller = new AbortController()
 
     async function startAnalysis() {
-      const res = await fetch('/api/analyze', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+      const res = await fetch(`${baseUrl}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),

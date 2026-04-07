@@ -47,7 +47,8 @@ export default function ResultClient({ initialResult }: Props) {
   const handleSave = useCallback(async () => {
     setSaveStatus('saving')
     try {
-      const res = await fetch('/api/save', {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+      const res = await fetch(`${baseUrl}/api/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(result),
