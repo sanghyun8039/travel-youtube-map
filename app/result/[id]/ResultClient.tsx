@@ -48,13 +48,35 @@ export default function ResultClient({ initialResult }: Props) {
     setSaveStatus('saving')
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      const res = await fetch(`${baseUrl}/api/save`, {
+      const body = {
+        videoId: result.videoId,
+        title: result.videoTitle,
+        channel: result.channel ?? {
+          channelId: result.videoId,
+          channelName: '알 수 없음',
+          channelUrl: `https://www.youtube.com/watch?v=${result.videoId}`,
+        },
+        places: result.items.map((item, i) => ({
+          timestamp: item.timestamp,
+          localName: item.place,
+          description: item.description,
+          orderIndex: i,
+          googlePlaceId: item.googlePlaceId,
+          address: item.address,
+          city: item.city,
+          country: item.country,
+          countryCode: item.countryCode,
+          lat: item.hasCoords ? item.lat : undefined,
+          lng: item.hasCoords ? item.lng : undefined,
+        })),
+      }
+      const res = await fetch(`${baseUrl}/videos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
-      setSaveStatus(data.success ? 'saved' : 'error')
+      setSaveStatus(data.videoId ? 'saved' : 'error')
     } catch {
       setSaveStatus('error')
     } finally {

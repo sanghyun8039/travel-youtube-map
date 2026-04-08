@@ -13,10 +13,18 @@ export interface TimelineItem {
   googlePlaceId?: string  // Places API에서 취득한 고유 ID
 }
 
+export interface ChannelInfo {
+  channelId: string
+  channelName: string
+  channelUrl: string
+  thumbnailUrl?: string
+}
+
 export interface AnalysisResult {
   id: string
   videoId: string
   videoTitle: string
+  channel?: ChannelInfo
   items: TimelineItem[]
   createdAt: string    // ISO 8601
 }

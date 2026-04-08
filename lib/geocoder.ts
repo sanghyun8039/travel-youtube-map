@@ -9,11 +9,53 @@ export interface GeocodeInfo {
 }
 
 export async function geocodePlace(query: string): Promise<GeocodeInfo | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  if (!apiKey) return null
+
   try {
-    const res = await fetch(`${baseUrl}/api/geocode?query=${encodeURIComponent(query)}`)
+    const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'places.id,places.location,places.formattedAddress,places.addressComponents',
+      },
+      body: JSON.stringify({ textQuery: query }),
+    })
+
     if (!res.ok) return null
-    return await res.json()
+
+    const data = await res.json()
+    const place = data.places?.[0]
+    if (!place) return null
+
+    let city = ''
+    let country = ''
+    let countryCode = ''
+    let cityFromAdmin = ''
+
+    place.addressComponents?.forEach((c: { longText: string; shortText: string; types: string[] }) => {
+      if (c.types.includes('country')) {
+        country = c.longText
+        countryCode = c.shortText
+      }
+      if (c.types.includes('locality')) {
+        city = c.longText
+      } else if (c.types.includes('administrative_area_level_1') && !city) {
+        cityFromAdmin = c.longText
+      }
+    })
+    if (!city) city = cityFromAdmin
+
+    return {
+      googlePlaceId: place.id,
+      lat: place.location.latitude,
+      lng: place.location.longitude,
+      address: place.formattedAddress ?? query,
+      city,
+      country,
+      countryCode,
+    }
   } catch {
     return null
   }
