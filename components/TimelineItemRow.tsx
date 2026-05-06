@@ -42,6 +42,15 @@ export default function TimelineItemRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <span className="text-sm font-bold text-white truncate">{item.place}</span>
+            {item.category && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a] flex-shrink-0">
+                {item.category === 'restaurant' && '🍴 식당'}
+                {item.category === 'cafe' && '☕ 카페'}
+                {item.category === 'attraction' && '🎡 관광지'}
+                {item.category === 'shopping' && '🛍️ 쇼핑'}
+                {item.category === 'accommodation' && '🏨 숙소'}
+              </span>
+            )}
             <span className="text-[10px] text-gray-600 flex-shrink-0">
               {getFlagEmoji(item.countryCode)} {item.city}
             </span>

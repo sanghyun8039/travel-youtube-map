@@ -6,6 +6,38 @@ export interface GeocodeInfo {
   country: string
   countryCode: string
   address: string
+  category?: string
+}
+
+const CATEGORY_MAPPING: Record<string, string> = {
+  restaurant: 'restaurant',
+  food: 'restaurant',
+  cafe: 'cafe',
+  bakery: 'cafe',
+  tourist_attraction: 'attraction',
+  museum: 'attraction',
+  park: 'attraction',
+  zoo: 'attraction',
+  aquarium: 'attraction',
+  amusement_park: 'attraction',
+  art_gallery: 'attraction',
+  shopping_mall: 'shopping',
+  store: 'shopping',
+  department_store: 'shopping',
+  clothing_store: 'shopping',
+  electronics_store: 'shopping',
+  lodging: 'accommodation',
+  hotel: 'accommodation',
+}
+
+function mapGoogleTypesToCategory(types: string[]): string | undefined {
+  if (!types) return undefined
+  for (const type of types) {
+    if (CATEGORY_MAPPING[type]) {
+      return CATEGORY_MAPPING[type]
+    }
+  }
+  return undefined
 }
 
 export async function geocodePlace(query: string): Promise<GeocodeInfo | null> {
@@ -18,7 +50,7 @@ export async function geocodePlace(query: string): Promise<GeocodeInfo | null> {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.id,places.location,places.formattedAddress,places.addressComponents',
+        'X-Goog-FieldMask': 'places.id,places.location,places.formattedAddress,places.addressComponents,places.types',
       },
       body: JSON.stringify({ textQuery: query }),
     })
@@ -55,6 +87,7 @@ export async function geocodePlace(query: string): Promise<GeocodeInfo | null> {
       city,
       country,
       countryCode,
+      category: mapGoogleTypesToCategory(place.types),
     }
   } catch {
     return null

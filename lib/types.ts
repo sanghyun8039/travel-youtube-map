@@ -11,6 +11,7 @@ export interface TimelineItem {
   lng: number;
   hasCoords: boolean; // false = geocoding failed → no map marker shown
   googlePlaceId?: string; // Places API에서 취득한 고유 ID
+  category?: string; // 장소 카테고리 (restaurant, cafe, attraction, shopping, accommodation)
 }
 
 export interface ChannelInfo {

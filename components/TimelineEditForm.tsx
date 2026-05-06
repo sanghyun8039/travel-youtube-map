@@ -30,7 +30,17 @@ export default function TimelineEditForm({ mode, item, onSave, onCancel }: Props
   const [country, setCountry] = useState(item?.country ?? '')
   const [countryCode, setCountryCode] = useState(item?.countryCode ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
+  const [category, setCategory] = useState(item?.category ?? '')
   const [coords, setCoords] = useState({ lat: item?.lat ?? 0, lng: item?.lng ?? 0 })
+
+  const categories = [
+    { value: '', label: '카테고리 선택 (미지정)' },
+    { value: 'restaurant', label: '🍴 식당' },
+    { value: 'cafe', label: '☕ 카페' },
+    { value: 'attraction', label: '🎡 관광지' },
+    { value: 'shopping', label: '🛍️ 쇼핑' },
+    { value: 'accommodation', label: '🏨 숙소' },
+  ]
   const [googlePlaceId, setGooglePlaceId] = useState(item?.googlePlaceId ?? '')
   const [hasCoords, setHasCoords] = useState(item?.hasCoords ?? false)
   const [isSearching, setIsSearching] = useState(false)
@@ -51,6 +61,7 @@ export default function TimelineEditForm({ mode, item, onSave, onCancel }: Props
       setCoords({ lat: result.lat, lng: result.lng })
       setGooglePlaceId(result.googlePlaceId)
       setHasCoords(true)
+      if (result.category) setCategory(result.category)
       if (!place) setPlace(result.address.split(',')[0]) // 장소명이 비어있으면 주소 첫 부분 사용
     } else {
       alert('주소 정보를 찾을 수 없습니다. 직접 입력해 주세요.')
@@ -71,6 +82,7 @@ export default function TimelineEditForm({ mode, item, onSave, onCancel }: Props
       lng: coords.lng,
       googlePlaceId: googlePlaceId || undefined,
       hasCoords: hasCoords,
+      category: category || undefined,
     })
   }
 
@@ -116,6 +128,21 @@ export default function TimelineEditForm({ mode, item, onSave, onCancel }: Props
           onChange={(e) => setPlace(e.target.value)} 
           placeholder="예: 경복궁, 에펠탑" 
         />
+      </div>
+
+      <div className="mb-4">
+        <label className={labelCls}>카테고리</label>
+        <select
+          className={inputCls}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          {categories.map((cat) => (
+            <option key={cat.value} value={cat.value}>
+              {cat.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="mb-4">

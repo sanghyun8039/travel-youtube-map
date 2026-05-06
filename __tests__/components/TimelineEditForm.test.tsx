@@ -17,7 +17,8 @@ const mockItem: TimelineItem = {
   description: '길거리 음식',
   lat: 37.5,
   lng: 126.9,
-  hasCoords: true
+  hasCoords: true,
+  category: 'shopping'
 }
 
 describe('TimelineEditForm', () => {
@@ -32,6 +33,7 @@ describe('TimelineEditForm', () => {
     )
     expect(screen.getByDisplayValue('07:48')).toBeInTheDocument()
     expect(screen.getByDisplayValue('명동 거리')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('🛍️ 쇼핑')).toBeInTheDocument()
   })
 
   it('calls onSave with updated values', () => {
@@ -47,9 +49,15 @@ describe('TimelineEditForm', () => {
     fireEvent.change(screen.getByDisplayValue('명동 거리'), {
       target: { value: '명동 쇼핑센터' },
     })
+    fireEvent.change(screen.getByDisplayValue('🛍️ 쇼핑'), {
+      target: { value: 'restaurant' },
+    })
     fireEvent.click(screen.getByText('변경사항 저장'))
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ place: '명동 쇼핑센터' })
+      expect.objectContaining({ 
+        place: '명동 쇼핑센터',
+        category: 'restaurant'
+      })
     )
   })
 

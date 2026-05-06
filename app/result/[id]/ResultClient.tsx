@@ -73,6 +73,7 @@ export default function ResultClient({ initialResult }: Props) {
           countryCode: item.countryCode,
           lat: item.hasCoords ? item.lat : undefined,
           lng: item.hasCoords ? item.lng : undefined,
+          category: item.category,
         })),
       };
       const res = await fetch(`${baseUrl}/videos`, {
