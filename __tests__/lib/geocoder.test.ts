@@ -5,7 +5,7 @@ global.fetch = mockFetch
 
 beforeEach(() => {
   mockFetch.mockReset()
-  process.env.GOOGLE_MAPS_API_KEY = 'fake-api-key'
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = 'fake-api-key'
 })
 
 function makePlacesResponse(overrides: object = {}) {
